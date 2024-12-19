@@ -193,6 +193,7 @@ RUN echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.li
     openresolv \
     openvpn \
     procps \
+    lftp \
     wireguard-tools \
     && apt-get clean \
     && apt --purge autoremove -y \
