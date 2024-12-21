@@ -1,10 +1,10 @@
 #!/bin/bash
-# Forked from binhex's OpenVPN dockers
+
 # Wait until tunnel is up
 
 while : ; do
-	tunnelstat=$(netstat -ie | grep -E "tun|tap|wg")
-	if [[ ! -z "${tunnelstat}" ]]; then
+	tunnelstat=$(ip link show | grep -E "wg")
+	if [[ -n "${tunnelstat}" ]]; then
 		break
 	else
 		sleep 1
@@ -12,7 +12,7 @@ while : ; do
 done
 
 # identify docker bridge interface name (probably eth0)
-docker_interface=$(netstat -ie | grep -vE "lo|tun|tap|wg" | sed -n '1!p' | grep -P -o -m 1 '^[\w]+')
+docker_interface=$(netstat -ie | grep -vE "lo|wg" | sed -n '1!p' | grep -P -o -m 1 '^[\w]+')
 if [[ "${DEBUG}" == "true" ]]; then
 	echo "[DEBUG] Docker interface defined as ${docker_interface}" | ts '%Y-%m-%d %H:%M:%.S'
 fi
@@ -22,18 +22,6 @@ docker_ip=$(ifconfig "${docker_interface}" | grep -o "inet [0-9]*\.[0-9]*\.[0-9]
 if [[ "${DEBUG}" == "true" ]]; then
 	echo "[DEBUG] Docker IP defined as ${docker_ip}" | ts '%Y-%m-%d %H:%M:%.S'
 fi
-
-#docker_default_range="172.17.0.0/16"
-
-#for IP in ${docker_ip}; do
-#	grepcidr "$docker_default_range" <(echo "$IP") >/dev/null
-#	grepcidr_status=$?
-#	if [ "${grepcidr_status}" -eq 1 ]; then
-#		echo "[ERROR] It seems like the IP the container is using outside the default Docker DHCP range" | ts '%Y-%m-%d %H:%M:%.S'
-#		echo "[ERROR] Use bridge mode to run this container. Using a custom IP is not supported." | ts '%Y-%m-%d %H:%M:%.S'
-#		echo "[ERROR] IP of the container: ${docker_ip}" | ts '%Y-%m-%d %H:%M:%.S'
-#	fi
-#done
 
 # identify netmask for docker bridge interface
 docker_mask=$(ifconfig "${docker_interface}" | grep -o "netmask [0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" | grep -o "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
@@ -113,7 +101,7 @@ iptables -A INPUT -i "${docker_interface}" -p tcp --dport 8080 -j ACCEPT
 iptables -A INPUT -i "${docker_interface}" -p tcp --sport 8080 -j ACCEPT
 
 # additional port list for scripts or container linking
-if [[ ! -z "${ADDITIONAL_PORTS}" ]]; then
+if [[ -n "${ADDITIONAL_PORTS}" ]]; then
 	# split comma separated string into list from ADDITIONAL_PORTS env variable
 	IFS=',' read -ra additional_port_list <<< "${ADDITIONAL_PORTS}"
 
@@ -167,7 +155,7 @@ iptables -A OUTPUT -o "${docker_interface}" -p tcp --dport 8080 -j ACCEPT
 iptables -A OUTPUT -o "${docker_interface}" -p tcp --sport 8080 -j ACCEPT
 
 # additional port list for scripts or container linking
-if [[ ! -z "${ADDITIONAL_PORTS}" ]]; then
+if [[ -n "${ADDITIONAL_PORTS}" ]]; then
 	# split comma separated string into list from ADDITIONAL_PORTS env variable
 	IFS=',' read -ra additional_port_list <<< "${ADDITIONAL_PORTS}"
 
