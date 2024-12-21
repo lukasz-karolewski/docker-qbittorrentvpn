@@ -60,7 +60,7 @@ not published yet
 |`RESTART_CONTAINER`| No |Set to `no` to **disable** the automatic restart when the network is possibly down.|`RESTART_CONTAINER=yes`|`yes`|
 |`INSTALL_PYTHON3`| No |Set this to `yes` to let the container install Python3.|`INSTALL_PYTHON3=yes`|`no`|
 |`ADDITIONAL_PORTS`| No |Adding a comma delimited list of ports will allow these ports via the iptables script.|`ADDITIONAL_PORTS=1234,8112`||
-
+|`ENABLE_FTP_TO_LAN`| No |Set this to `yes` to enable FTP to the LAN network.|`ENABLE_FTP_TO_LAN=yes`|`no`|
 
 
 

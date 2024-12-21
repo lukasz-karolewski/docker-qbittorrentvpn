@@ -159,6 +159,22 @@ iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 # accept output from local loopback adapter
 iptables -A OUTPUT -o lo -j ACCEPT
 
+# forward iptable rules
+###
+# just in case drop all forwarding traffic
+iptables -P FORWARD DROP
+
+# enable FTP for LAN networks
+if [[ $ENABLE_FTP_TO_LAN == "1" || $ENABLE_FTP_TO_LAN == "true" || $ENABLE_FTP_TO_LAN == "yes" ]]; then
+	for lan_network_item in "${lan_network_list[@]}"; do
+		iptables -A OUTPUT -p tcp -d ${lan_network_item} --dport 21 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+		iptables -A INPUT -p tcp -s ${lan_network_item} --sport 21 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+		
+		iptables -A OUTPUT -p tcp -d ${lan_network_item} --dport 49152:65534 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+		iptables -A INPUT -p tcp -s ${lan_network_item} --sport 49152:65534 -m conntrack --ctstate ESTABLISHED -j ACCEPT
+	done
+fi
+
 echo "[INFO] iptables defined as follows..." | ts '%Y-%m-%d %H:%M:%.S'
 echo "--------------------"
 iptables -S
