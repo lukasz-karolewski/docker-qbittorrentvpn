@@ -89,7 +89,7 @@ RUN apt update \
     /tmp/* \
     /var/tmp/*
 
-# Compile and install libtorrent-rasterbar
+# Compile and install libtorrent
 RUN apt update \
     && apt upgrade -y \
     && apt install -y --no-install-recommends \
@@ -176,15 +176,13 @@ RUN apt update \
     /var/tmp/*
 
 # Install WireGuard and some other dependencies some of the scripts in the container rely on.
-RUN echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable-wireguard.list \
-    && printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' > /etc/apt/preferences.d/limit-unstable \
-    && apt update \
+RUN apt update \
     && apt install -y --no-install-recommends \
     ca-certificates \
-    dos2unix \
     inetutils-ping \
     ipcalc \
     iptables \
+    iproute2 \
     kmod \
     libqt6network6 \
     libqt6xml6 \
@@ -212,7 +210,6 @@ RUN echo "deb http://deb.debian.org/debian/ sid non-free" > /etc/apt/sources.lis
     p7zip-full \
     unzip \
     zip \
-    iproute2 \
     && apt-get clean \
     && apt --purge autoremove -y \
     && rm -rf \
