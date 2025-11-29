@@ -17,7 +17,7 @@ RUN apt update \
     g++ \
     libxml2-utils \
     ninja-build \
-    && BOOST_VERSION=1.86.0 \
+    && BOOST_VERSION=$(curl -s https://archives.boost.io/release/ | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1) \
     && BOOST_VERSION_US=$(echo ${BOOST_VERSION} | tr '.' '_') \
     && curl -o /opt/boost_${BOOST_VERSION_US}.tar.gz -L https://archives.boost.io/release/${BOOST_VERSION}/source/boost_${BOOST_VERSION_US}.tar.gz \
     && tar -xzf /opt/boost_${BOOST_VERSION_US}.tar.gz -C /opt \
