@@ -175,6 +175,32 @@ RUN apt update \
     /tmp/* \
     /var/tmp/*
 
+# Install qbtmud (modern alternative WebUI for qBittorrent)
+RUN apt update \
+    && apt upgrade -y \
+    && apt install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    jq \
+    unzip \
+    && QBTMUD_ASSETS=$(curl -sX GET "https://api.github.com/repos/lantean-code/qbtmud/releases/latest" | jq -r '.assets_url') \
+    && QBTMUD_DOWNLOAD_URL=$(curl -sX GET ${QBTMUD_ASSETS} | jq -r '.[] | select(.name | test("qbt-mud.*\\.zip$";"i")) | .browser_download_url') \
+    && curl -o /opt/qbtmud.zip -L ${QBTMUD_DOWNLOAD_URL} \
+    && mkdir -p /opt/qbtmud-webui \
+    && unzip /opt/qbtmud.zip -d /opt/qbtmud-webui \
+    && rm /opt/qbtmud.zip \
+    && apt purge -y \
+    ca-certificates \
+    curl \
+    jq \
+    unzip \
+    && apt-get clean \
+    && apt --purge autoremove -y \
+    && rm -rf \
+    /var/lib/apt/lists/* \
+    /tmp/* \
+    /var/tmp/*
+
 # Install WireGuard and some other dependencies some of the scripts in the container rely on.
 RUN apt update \
     && apt install -y --no-install-recommends \
