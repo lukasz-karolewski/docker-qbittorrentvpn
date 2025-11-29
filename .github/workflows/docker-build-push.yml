@@ -18,6 +18,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Prepare platform tag
+        id: platform
+        run: |
+          platform=${{ matrix.platform }}
+          echo "tag=${platform//\//-}" >> $GITHUB_OUTPUT
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -47,8 +53,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/qbittorrentvpn,push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/qbittorrentvpn:buildcache-${{ matrix.platform }}
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/qbittorrentvpn:buildcache-${{ matrix.platform }},mode=max
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/qbittorrentvpn:buildcache-${{ steps.platform.outputs.tag }}
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/qbittorrentvpn:buildcache-${{ steps.platform.outputs.tag }},mode=max
 
       - name: Export digest
         run: |
