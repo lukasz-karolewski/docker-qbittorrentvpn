@@ -46,8 +46,10 @@ RUN apt update \
     curl \
     jq \
     unzip \
+    && ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then NINJA_ARCH=""; elif [ "$ARCH" = "aarch64" ]; then NINJA_ARCH="-aarch64"; else echo "Unsupported architecture: $ARCH" && exit 1; fi \
     && NINJA_ASSETS=$(curl -sX GET "https://api.github.com/repos/ninja-build/ninja/releases" | jq '.[] | select(.prerelease==false) | .assets_url' | head -n 1 | tr -d '"') \
-    && NINJA_DOWNLOAD_URL=$(curl -sX GET ${NINJA_ASSETS} | jq '.[] | select(.name | match("ninja-linux.zip";"i")) .browser_download_url' | tr -d '"') \
+    && NINJA_DOWNLOAD_URL=$(curl -sX GET ${NINJA_ASSETS} | jq --arg suffix "$NINJA_ARCH" '.[] | select(.name | match("ninja-linux" + $suffix + ".zip";"i")) .browser_download_url' | tr -d '"') \
     && curl -o /opt/ninja-linux.zip -L ${NINJA_DOWNLOAD_URL} \
     && unzip /opt/ninja-linux.zip -d /opt \
     && mv /opt/ninja /usr/local/bin/ninja \
@@ -72,8 +74,10 @@ RUN apt update \
     ca-certificates \
     curl \
     jq \
+    && ARCH=$(uname -m) \
+    && if [ "$ARCH" = "x86_64" ]; then CMAKE_ARCH="x86_64"; elif [ "$ARCH" = "aarch64" ]; then CMAKE_ARCH="aarch64"; else echo "Unsupported architecture: $ARCH" && exit 1; fi \
     && CMAKE_ASSETS=$(curl -sX GET "https://api.github.com/repos/Kitware/CMake/releases" | jq '.[] | select(.prerelease==false) | .assets_url' | head -n 1 | tr -d '"') \
-    && CMAKE_DOWNLOAD_URL=$(curl -sX GET ${CMAKE_ASSETS} | jq '.[] | select(.name | match("Linux-x86_64.sh";"i")) .browser_download_url' | tr -d '"') \
+    && CMAKE_DOWNLOAD_URL=$(curl -sX GET ${CMAKE_ASSETS} | jq --arg arch "$CMAKE_ARCH" '.[] | select(.name | match("Linux-" + $arch + ".sh";"i")) .browser_download_url' | tr -d '"') \
     && curl -o /opt/cmake.sh -L ${CMAKE_DOWNLOAD_URL} \
     && chmod +x /opt/cmake.sh \
     && /bin/bash /opt/cmake.sh --skip-license --prefix=/usr \
