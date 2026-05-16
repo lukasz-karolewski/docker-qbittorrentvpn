@@ -1,5 +1,5 @@
 # qBittorrent, WireGuard, qbittorrentvpn
-FROM debian:sid-slim
+FROM debian:trixie-slim
 
 WORKDIR /opt
 

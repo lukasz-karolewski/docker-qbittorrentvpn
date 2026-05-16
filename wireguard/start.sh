@@ -112,30 +112,9 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 		exit 1
 	fi
 
-	export NAME_SERVERS=$(echo "${NAME_SERVERS}" | sed -e 's~^[ \t]*~~;s~[ \t]*$~~')
-	if [[ -n "${NAME_SERVERS}" ]]; then
-		echo "[INFO] NAME_SERVERS defined as '${NAME_SERVERS}'" | ts "$timestamp_format"
-	else
-		echo "[WARNING] NAME_SERVERS not defined (via -e NAME_SERVERS), defaulting to CloudFlare and Google name servers" | ts "$timestamp_format"
-		export NAME_SERVERS="1.1.1.1,8.8.8.8,1.0.0.1,8.8.4.4"
-	fi
-
 else
 	echo "[WARNING] !!IMPORTANT!! You have set the VPN to disabled, your connection will NOT be secure!" | ts "$timestamp_format"
 fi
-
-
-# split comma seperated string into list from NAME_SERVERS env variable
-IFS=',' read -ra name_server_list <<< "${NAME_SERVERS}"
-
-# process name servers in the list
-for name_server_item in "${name_server_list[@]}"; do
-	# strip whitespace from start and end of lan_network_item
-	name_server_item=$(echo "${name_server_item}" | sed -e 's~^[ \t]*~~;s~[ \t]*$~~')
-
-	echo "[INFO] Adding ${name_server_item} to resolv.conf" | ts "$timestamp_format"
-	echo "nameserver ${name_server_item}" >> /etc/resolv.conf
-done
 
 if [[ -z "${PUID}" ]]; then
 	echo "[INFO] PUID not defined. Defaulting to root user" | ts "$timestamp_format"
@@ -154,6 +133,8 @@ if [[ $VPN_ENABLED == "1" || $VPN_ENABLED == "true" || $VPN_ENABLED == "yes" ]];
 		wg-quick down "$VPN_CONFIG" || echo "WireGuard is down already" | ts "$timestamp_format" # Run wg-quick down as an extra safeguard in case WireGuard is still up for some reason
 		sleep 1 # Just to give WireGuard a bit to go down
 	fi
+	echo "[INFO] Registering Docker resolver with resolvconf before WireGuard DNS setup..." | ts "$timestamp_format"
+	resolvconf -a docker < /etc/resolv.conf
 	wg-quick up "$VPN_CONFIG"
 	exec /bin/bash /etc/qbittorrent/iptables.sh
 else

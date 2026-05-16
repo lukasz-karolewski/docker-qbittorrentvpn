@@ -6,7 +6,7 @@ Docker container which runs the latest [qBittorrent](https://github.com/qbittorr
 ![alt text][preview]
 
 # Docker Features
-* Base: Debian sid-slim
+* Base: Debian trixie-slim
 * [qBittorrent](https://github.com/qbittorrent/qBittorrent) compiled from source
 * [libtorrent](https://github.com/arvidn/libtorrent) compiled from source
 * Compiled with the latest version of [Boost](https://www.boost.org/)
@@ -28,6 +28,10 @@ services:
     environment:
       - VPN_ENABLED=yes
       - ... # see Environment Variables
+    # Optional: DNS used only before WireGuard is up.
+    # Once WireGuard starts, DNS from wg0.conf is applied by wg-quick.
+    dns:
+      - 1.1.1.1
     volumes:
       - ./config:/config
       - ./downloads:/downloads
@@ -49,7 +53,6 @@ not published yet
 |`VPN_ENABLED`| Yes | Enable VPN (yes/no)?|`VPN_ENABLED=yes`|`yes`|
 |`LAN_NETWORK`| Yes (atleast one) | Comma delimited local Network's with CIDR notation |`LAN_NETWORK=192.168.0.0/24,10.10.0.0/24`||
 |`ENABLE_SSL`| No | Let the container handle SSL (yes/no)? |`ENABLE_SSL=yes`|`yes`|
-|`NAME_SERVERS`| No | Comma delimited name servers |`NAME_SERVERS=1.1.1.1,1.0.0.1`|`1.1.1.1,1.0.0.1`|
 |`PUID`| No | UID applied to /config files and /downloads |`PUID=99`|`99`|
 |`PGID`| No | GID applied to /config files and /downloads  |`PGID=100`|`100`|
 |`UMASK`| No | |`UMASK=002`|`002`|
@@ -89,6 +92,32 @@ Access https://IPADDRESS:PORT from a browser on the same network. (for example: 
 
 # How to use WireGuard 
 The container will fail to boot if `VPN_ENABLED` is set and there is no valid .conf file present in the /config/wireguard directory. Drop a .conf file from your VPN provider into /config/wireguard and start the container again. The file must have the name `wg0.conf`, or it will fail to start.
+
+## DNS
+DNS has two phases:
+
+* Initial DNS, before WireGuard is up, is provided by Docker. If you need to customize it, use Docker Compose `dns:` on the service.
+* VPN DNS, after WireGuard is up, is provided by the `DNS = ...` line in `wg0.conf`.
+
+Do not configure DNS with environment variables. The startup script registers Docker's initial `/etc/resolv.conf` with `openresolv` before calling `wg-quick`. This lets `wg-quick` apply the WireGuard `DNS = ...` setting normally without leaking post-connect DNS traffic outside the tunnel.
+
+Example:
+
+```yaml
+services:
+  wireguard:
+    dns:
+      - 1.1.1.1
+```
+
+Example `wg0.conf`:
+
+```ini
+[Interface]
+Address = 10.160.0.194/32
+PrivateKey = ...
+DNS = 10.128.0.1
+```
 
 ## WireGuard IPv6 issues
 If you use WireGuard and also have IPv6 enabled, it is necessary to add the IPv6 range to the `LAN_NETWORK` environment variable.  
