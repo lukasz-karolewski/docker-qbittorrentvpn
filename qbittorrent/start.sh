@@ -2,6 +2,15 @@
 
 # Define timestamp format
 timestamp_format='%Y-%m-%d %H:%M:%.S'
+qbt_config_path="/config/qBittorrent/config"
+qbt_pidfile="/var/run/qbittorrent.pid"
+qbt_process_name="qbittorrent-nox"
+
+is_qbittorrent_running() {
+	local pid="$1"
+	[[ -n "$pid" && -e "/proc/${pid}" ]] || return 1
+	[[ "$(cat "/proc/${pid}/comm" 2>/dev/null)" == "${qbt_process_name}" ]]
+}
 
 # Check if /config/qBittorrent exists, if not make the directory
 if [[ ! -e /config/qBittorrent/config ]]; then
@@ -100,6 +109,18 @@ else
 	export UMASK="002"
 fi
 
+# qBittorrent can leave single-instance runtime files behind when it exits
+# during a container restart. If the process is gone, remove those stale files
+# before startup so qBittorrent does not immediately terminate.
+if ! pgrep -x "${qbt_process_name}" > /dev/null 2>&1; then
+	for runtime_file in "${qbt_config_path}/lockfile" "${qbt_config_path}/ipc-socket"; do
+		if [[ -e "${runtime_file}" || -S "${runtime_file}" ]]; then
+			echo "[WARNING] Removing stale qBittorrent runtime file: ${runtime_file}" | ts "$timestamp_format"
+			rm -f "${runtime_file}"
+		fi
+	done
+fi
+
 # Start qBittorrent
 echo "[INFO] Starting qBittorrent daemon..." | ts "$timestamp_format"
 /bin/bash /etc/qbittorrent/qbittorrent.init start &
@@ -108,10 +129,17 @@ chmod -R 755 /config/qBittorrent
 # wait for the qbittorrent.init script to finish and grab the qbittorrent pid
 # from the file created by the start script
 wait $!
-qbittorrentpid=$(cat /var/run/qbittorrent.pid)
+if [[ ! -s "${qbt_pidfile}" ]]; then
+	echo "[ERROR] qBittorrent failed to create pidfile ${qbt_pidfile}" | ts "$timestamp_format"
+	exit 1
+fi
+qbittorrentpid=$(cat "${qbt_pidfile}")
+
+# Give qBittorrent time to fail fast on config or single-instance problems.
+sleep 5
 
 # If the process exists, make sure that the log file has the proper rights and start the health check
-if [ -e /proc/$qbittorrentpid ]; then
+if is_qbittorrent_running "${qbittorrentpid}"; then
 	echo "[INFO] qBittorrent PID: $qbittorrentpid" | ts "$timestamp_format"
 
 	# trap the TERM signal for propagation and graceful shutdowns
@@ -165,6 +193,11 @@ if [ -e /proc/$qbittorrentpid ]; then
 	echo "[INFO] HEALTH_CHECK_AMOUNT is set to ${HEALTH_CHECK_AMOUNT}" | ts "$timestamp_format"
 
 	while true; do
+		if ! is_qbittorrent_running "${qbittorrentpid}"; then
+			echo "[ERROR] qBittorrent process ${qbittorrentpid} is no longer running." | ts "$timestamp_format"
+			exit 1
+		fi
+
 		# Ping uses both exit codes 1 and 2. Exit code 2 cannot be used for docker health checks, therefore we use this script to catch error code 2
 		ping -c ${HEALTH_CHECK_AMOUNT} $HOST > /dev/null 2>&1
 		STATUS=$?
@@ -185,4 +218,5 @@ if [ -e /proc/$qbittorrentpid ]; then
 	done
 else
 	echo "[ERROR] qBittorrent failed to start!" | ts "$timestamp_format"
+	exit 1
 fi
