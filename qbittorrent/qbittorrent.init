@@ -29,7 +29,7 @@ QBITTORRENTLOGPATH="/config/qBittorrent/data/logs/"
 QBITTORRENTLOG="qbittorrent.log"
 
 DAEMON="/usr/local/bin/qbittorrent-nox"
-DAEMON_ARGS="--profile=/config"
+DAEMON_ARGS="--profile=/config --confirm-legal-notice"
 DAEMONSTRING="$DAEMON $DAEMON_ARGS >> $QBITTORRENTLOGPATH$QBITTORRENTLOG 2>&1"
 
 export DBUS_SESSION_BUS_ADDRESS=""
